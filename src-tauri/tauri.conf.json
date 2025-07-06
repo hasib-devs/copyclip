@@ -38,6 +38,9 @@
   "plugins": {
     "fs": {
       "requireLiteralLeadingDot": false
+    },
+    "sql": {
+      "preload": ["sqlite:copyclip.db"]
     }
   }
 }

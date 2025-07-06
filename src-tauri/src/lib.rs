@@ -1,5 +1,4 @@
 mod commands;
-mod services;
 
 use commands::{get_clipboard_entries, greet, insert_clipboard_entry};
 use tauri::{Listener, Manager};

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "start": "tauri dev",
-    "db:clear": "rm ~/Library/Application Support/copyclip.hasib.dev/copyclip.db"
+    "db:clear": "rm '~/Library/Application Support/copyclip.hasib.dev/copyclip.db'"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.7",

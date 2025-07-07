@@ -98,17 +98,30 @@ const ClipboardItem = ({ clip, index }: Props) => {
               <MoreHorizontal className="h-5 w-5" />
             </DropdownMenu.Trigger>
             <DropdownMenu.Content sideOffset={-20}>
-              <DropdownMenu.Item onClick={() => copyToClipboard(clip)}>
+              <DropdownMenu.Item
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(clip);
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 <span>Copy</span>
               </DropdownMenu.Item>
-              <DropdownMenu.Item onClick={() => togglePin(clip)}>
+              <DropdownMenu.Item
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePin(clip);
+                }}
+              >
                 <Pin className="mr-2 h-4 w-4" />
                 <span>{isPined ? "Unpin" : "Pin"}</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 color="red"
-                onClick={() => deleteClip(clip.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteClip(clip.id);
+                }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 <span>Delete</span>

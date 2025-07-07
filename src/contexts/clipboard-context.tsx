@@ -59,7 +59,7 @@ export const ClipboardProvider: FC<{ children: ReactElement }> = ({
     deleteUnpinned,
   } = useClipboardApi();
 
-  const DEBOUNCE_MS = 200;
+  const DEBOUNCE_MS = 100;
 
   // Clear debounce timer
   const clearDebounceTimer = useCallback(() => {
@@ -70,70 +70,64 @@ export const ClipboardProvider: FC<{ children: ReactElement }> = ({
   }, []);
 
   // Add a new clip
-  const addClip = useCallback(
-    async (newEntry: ClipCreateType) => {
-      // Handle ignored clips (when copying to clipboard)
-      if (ignoreClip.current) {
-        setClips((prev) => {
-          return prev.map((entry) => {
-            if (entry.id === ignoreId.current) {
-              return { ...entry, updated_at: Date.now() };
-            }
-            return entry;
-          });
+  const addClip = async (newEntry: ClipCreateType) => {
+    // Handle ignored clips (when copying to clipboard)
+    if (ignoreClip.current) {
+      setClips((prev) => {
+        return prev.map((entry) => {
+          if (entry.id === ignoreId.current) {
+            return { ...entry, updated_at: Date.now() };
+          }
+          return entry;
         });
-
-        // Reset ignore flag after a short delay
-        setTimeout(() => {
-          ignoreClip.current = false;
-          ignoreId.current = undefined;
-        }, 10);
-        return;
-      }
-
-      // Validate content
-      const isEmpty = !newEntry.content || newEntry.content.trim?.() === "";
-      if (isEmpty) return;
-
-      // Check for duplicate with last entry
-      if (
-        lastEntryRef.current &&
-        lastEntryRef.current.content === newEntry.content &&
-        lastEntryRef.current.content_type === newEntry.content_type
-      ) {
-        return;
-      }
-
-      // Check for duplicate with first clip using functional state update
-      setClips((prevClips) => {
-        const exists = prevClips[0]?.content === newEntry.content;
-        if (exists) return prevClips;
-
-        lastEntryRef.current = newEntry;
-
-        const now = Date.now();
-        const entry: ClipType = {
-          id: crypto.randomUUID(),
-          is_pinned: false,
-          created_at: now,
-          updated_at: now,
-          ...newEntry,
-        };
-
-        const newClips = [entry, ...prevClips];
-
-        // Debounce save operation
-        clearDebounceTimer();
-        debounceTimerRef.current = setTimeout(
-          () => saveClip(entry),
-          DEBOUNCE_MS
-        );
-
-        return newClips;
       });
-    },
-    [clearDebounceTimer]
-  );
+
+      // Reset ignore flag after a short delay
+      setTimeout(() => {
+        ignoreClip.current = false;
+        ignoreId.current = undefined;
+      }, 100);
+      return;
+    }
+
+    // Validate content
+    const isEmpty = !newEntry.content || newEntry.content.trim?.() === "";
+    if (isEmpty) return;
+
+    // Check for duplicate with last entry
+    if (
+      lastEntryRef.current &&
+      lastEntryRef.current.content === newEntry.content &&
+      lastEntryRef.current.content_type === newEntry.content_type
+    ) {
+      return;
+    }
+
+    // Check for duplicate with first clip using functional state update
+    setClips((prevClips) => {
+      const exists = prevClips[0]?.content === newEntry.content;
+      if (exists) return prevClips;
+
+      lastEntryRef.current = newEntry;
+
+      const now = Date.now();
+      const entry: ClipType = {
+        id: crypto.randomUUID(),
+        is_pinned: false,
+        created_at: now,
+        updated_at: now,
+        ...newEntry,
+      };
+
+      const newClips = [entry, ...prevClips];
+
+      // Debounce save operation
+      clearDebounceTimer();
+      debounceTimerRef.current = setTimeout(() => saveClip(entry), DEBOUNCE_MS);
+
+      return newClips;
+    });
+  };
 
   // Save to DB
   const saveClip = useCallback(
@@ -331,16 +325,14 @@ export const ClipboardProvider: FC<{ children: ReactElement }> = ({
             console.log("Text update aborted");
             return;
           }
-          // Use a stable reference to avoid circular dependency
 
           addClip({ content_type: "text", content: newText });
         }),
-        onImageUpdate(async (base64Img) => {
+        onImageUpdate((base64Img) => {
           if (signal.aborted) {
             console.log("Image update aborted");
             return;
           }
-          // Use a stable reference to avoid circular dependency
 
           addClip({ content_type: "image", content: base64Img });
         }),
@@ -387,18 +379,7 @@ export const ClipboardProvider: FC<{ children: ReactElement }> = ({
         abortRef.current.abort();
       }
     }
-  }, [clearDebounceTimer, saveClip]);
-
-  // Stop monitoring clipboard
-  // const stopMonitoring = useCallback(() => {
-  //   console.log("Stopping clipboard monitoring");
-  //   if (abortRef.current) {
-  //     abortRef.current.abort();
-  //     abortRef.current = null;
-  //   }
-  //   isListeningRef.current = false;
-  //   clearDebounceTimer();
-  // }, [clearDebounceTimer]);
+  }, []);
 
   // Initialize
   useEffect(() => {
@@ -437,9 +418,8 @@ export const ClipboardProvider: FC<{ children: ReactElement }> = ({
         abortRef.current = null;
       }
       isListeningRef.current = false;
-      clearDebounceTimer();
     };
-  }, []); // Empty dependency array to run only once on mount
+  }, [startMonitoring]); // Empty dependency array to run only once on mount
 
   const value: ClipboardContextType = {
     filteredClips,

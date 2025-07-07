@@ -25,7 +25,7 @@ type DatabaseContextType = {
   status: DatabaseStatus;
   error: DatabaseError | null;
   retryConnection: () => Promise<void>;
-  resetDatabase: () => Promise<void>;
+  cleanupDatabase: () => Promise<void>;
   isHealthy: boolean;
 };
 
@@ -47,21 +47,12 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
 
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<number | null>(null);
-  const healthCheckIntervalRef = useRef<number | null>(null);
 
   // Clear retry timeout
   const clearRetryTimeout = useCallback(() => {
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Clear health check interval
-  const clearHealthCheckInterval = useCallback(() => {
-    if (healthCheckIntervalRef.current) {
-      clearInterval(healthCheckIntervalRef.current);
-      healthCheckIntervalRef.current = null;
     }
   }, []);
 
@@ -121,44 +112,25 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
   }, [initDatabase, clearRetryTimeout]);
 
   // Reset database connection completely
-  const resetDatabase = useCallback(async (): Promise<void> => {
-    console.log("Resetting database connection...");
-
-    // Clear all timers
+  const cleanupDatabase = useCallback(async (): Promise<void> => {
+    console.log("Cleaning up database connection...");
     clearRetryTimeout();
-    clearHealthCheckInterval();
 
-    // Close existing connection
     if (db) {
       try {
         await db.close();
-        setDb(undefined);
-        setStatus("initializing");
-        setError(null);
-        setIsHealthy(false);
-        retryCountRef.current = 0;
       } catch (error) {
-        console.warn("Error closing database during reset:", error);
+        console.warn("Error closing database during cleanup:", error);
       }
     }
-
-    // Reset state
-    setDb(undefined);
-    setStatus("initializing");
-    setError(null);
-    setIsHealthy(false);
-    retryCountRef.current = 0;
-
-    // Reinitialize
-    await initDatabase(DB_DATABASE);
-  }, [db, initDatabase, clearRetryTimeout, clearHealthCheckInterval]);
+  }, [db, clearRetryTimeout]);
 
   // Initialize database on mount
   useEffect(() => {
     initDatabase(DB_DATABASE);
-    // return () => {
-    //   resetDatabase();
-    // };
+    return () => {
+      cleanupDatabase();
+    };
   }, []);
 
   // Computed isDbReady value
@@ -170,7 +142,7 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
     status,
     error,
     retryConnection,
-    resetDatabase,
+    cleanupDatabase,
     isHealthy,
   };
 

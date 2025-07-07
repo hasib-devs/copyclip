@@ -193,16 +193,10 @@ export const useClipboardApi = () => {
       }
 
       return executeWithRetry(async () => {
-        await db!.execute(
-          "UPDATE clips SET content_type = $1, content = $2, is_pinned = $3, updated_at = $4 WHERE id = $5",
-          [
-            clip.content_type,
-            clip.content,
-            castBoolean(clip.is_pinned) ? 1 : 0, // Store as integer for SQLite
-            clip.updated_at,
-            clip.id,
-          ]
-        );
+        await db!.execute("UPDATE clips SET updated_at = $1 WHERE id = $2", [
+          clip.updated_at,
+          clip.id,
+        ]);
       }, "update clip");
     },
     [validateClip, executeWithRetry, db, castBoolean]

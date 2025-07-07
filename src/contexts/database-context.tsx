@@ -65,37 +65,9 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
     }
   }, []);
 
-  // Health check function
-  const performHealthCheck = useCallback(async () => {
-    if (!db) {
-      setIsHealthy(false);
-      return;
-    }
-
-    try {
-      // Simple query to test database connection
-      await db.select("SELECT 1 as health_check");
-      setIsHealthy(true);
-    } catch (error) {
-      console.warn("Database health check failed:", error);
-      setIsHealthy(false);
-
-      // If health check fails with closed pool error, mark as unhealthy
-      if (error instanceof Error && error.message.includes("closed pool")) {
-        console.log("Detected closed pool, marking as unhealthy...");
-        setStatus("error");
-        setError({
-          message: "Database connection pool is closed",
-          code: "CLOSED_POOL",
-          timestamp: Date.now(),
-        });
-      }
-    }
-  }, [db]);
-
   // Initialize database connection
   const initDatabase = useCallback(
-    async (dbPath: string, isRetry = false): Promise<void> => {
+    async (dbPath: string): Promise<void> => {
       if (db) {
         return Promise.resolve();
       }
@@ -108,13 +80,6 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
         setIsHealthy(true);
         retryCountRef.current = 0;
         clearRetryTimeout();
-
-        // Start health check interval
-        // clearHealthCheckInterval();
-        // healthCheckIntervalRef.current = setInterval(performHealthCheck, 30000); // Check every 30 seconds
-
-        // Perform initial health check
-        // await performHealthCheck();
       } catch (error) {
         console.error("Failed to load database:", error);
 
@@ -138,7 +103,7 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
 
           clearRetryTimeout();
           retryTimeoutRef.current = setTimeout(() => {
-            initDatabase(dbPath, true);
+            initDatabase(dbPath);
           }, RETRY_DELAY_MS * retryCountRef.current);
         } else {
           console.error("Max retry attempts reached for database connection");
@@ -152,7 +117,7 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
   const retryConnection = useCallback(async (): Promise<void> => {
     retryCountRef.current = 0;
     clearRetryTimeout();
-    await initDatabase(DB_DATABASE, true);
+    await initDatabase(DB_DATABASE);
   }, [initDatabase, clearRetryTimeout]);
 
   // Reset database connection completely
@@ -185,7 +150,7 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
     retryCountRef.current = 0;
 
     // Reinitialize
-    await initDatabase(DB_DATABASE, false);
+    await initDatabase(DB_DATABASE);
   }, [db, initDatabase, clearRetryTimeout, clearHealthCheckInterval]);
 
   // Initialize database on mount

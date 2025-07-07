@@ -96,27 +96,9 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
   // Initialize database connection
   const initDatabase = useCallback(
     async (dbPath: string, isRetry = false): Promise<void> => {
-      console.log("Initializing database", {
-        isRetry,
-        db,
-        status,
-        isHealthy,
-        error,
-        retryCount: retryCountRef.current,
-        retryTimeout: retryTimeoutRef.current,
-        healthCheckInterval: healthCheckIntervalRef.current,
-      });
       if (db) {
         return Promise.resolve();
       }
-
-      console.log("Trying to load database", {
-        isRetry,
-        db,
-        status,
-        isHealthy,
-        error,
-      });
 
       try {
         const database = await Database.load(dbPath);
@@ -216,7 +198,6 @@ export const DatabaseProvider: FC<{ children: ReactElement }> = ({
 
   // Computed isDbReady value
   const isDbReady = status === "ready" && isHealthy;
-  console.log("isDbReady", { status, isHealthy, isDbReady });
 
   const value: DatabaseContextType = {
     db,

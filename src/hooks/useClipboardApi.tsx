@@ -25,6 +25,24 @@ export const useClipboardApi = () => {
     backoffMultiplier: 2,
   };
 
+  // Helper function to cast boolean values consistently
+  const castBoolean = (value: any): boolean => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string") return value === "true" || value === "1";
+    if (typeof value === "number") return value !== 0;
+    return Boolean(value);
+  };
+
+  // Helper function to process clip data and ensure proper types
+  const processClipData = (clip: any): ClipType => {
+    return {
+      ...clip,
+      is_pinned: castBoolean(clip.is_pinned),
+      created_at: Number(clip.created_at),
+      updated_at: Number(clip.updated_at),
+    };
+  };
+
   // Helper function to check database availability
   const checkDatabaseAvailability = useCallback(() => {
     if (!db) {
@@ -134,14 +152,14 @@ export const useClipboardApi = () => {
             clip.id,
             clip.content_type,
             clip.content,
-            clip.is_pinned || false,
+            castBoolean(clip.is_pinned) ? 1 : 0, // Store as integer for SQLite
             clip.created_at,
             clip.updated_at,
           ]
         );
       }, "create clip");
     },
-    [validateClip, executeWithRetry, db]
+    [validateClip, executeWithRetry, db, castBoolean]
   );
 
   const findAll = useCallback(
@@ -153,10 +171,14 @@ export const useClipboardApi = () => {
           "SELECT * FROM clips ORDER BY created_at DESC LIMIT $1",
           [limit]
         );
-        return result || [];
+
+        // Process and cast all clip data to ensure proper types
+        const processedResult = (result || []).map(processClipData);
+
+        return processedResult;
       }, "fetch clips");
     },
-    [executeWithRetry, db]
+    [executeWithRetry, db, processClipData]
   );
 
   const updateOne = useCallback(
@@ -176,14 +198,14 @@ export const useClipboardApi = () => {
           [
             clip.content_type,
             clip.content,
-            clip.is_pinned || false,
+            castBoolean(clip.is_pinned) ? 1 : 0, // Store as integer for SQLite
             clip.updated_at,
             clip.id,
           ]
         );
       }, "update clip");
     },
-    [validateClip, executeWithRetry, db]
+    [validateClip, executeWithRetry, db, castBoolean]
   );
 
   const updatePin = useCallback(
@@ -197,12 +219,12 @@ export const useClipboardApi = () => {
 
       return executeWithRetry(async () => {
         await db!.execute("UPDATE clips SET is_pinned = $1 WHERE id = $2", [
-          isPinned,
+          castBoolean(isPinned) ? 1 : 0, // Store as integer for SQLite
           id,
         ]);
       }, "update pin status");
     },
-    [executeWithRetry, db]
+    [executeWithRetry, db, castBoolean]
   );
 
   const deleteOne = useCallback(
@@ -230,7 +252,7 @@ export const useClipboardApi = () => {
     DatabaseOperationResult<void>
   > => {
     return executeWithRetry(async () => {
-      await db!.execute("DELETE FROM clips WHERE is_pinned = true");
+      await db!.execute("DELETE FROM clips WHERE is_pinned = 1");
     }, "delete pinned clips");
   }, [executeWithRetry, db]);
 
@@ -239,7 +261,7 @@ export const useClipboardApi = () => {
   > => {
     return executeWithRetry(async () => {
       await db!.execute(
-        "DELETE FROM clips WHERE is_pinned = false OR is_pinned IS NULL"
+        "DELETE FROM clips WHERE is_pinned = 0 OR is_pinned IS NULL"
       );
     }, "delete unpinned clips");
   }, [executeWithRetry, db]);
